@@ -4,28 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wealth & Multi-Profile Portfolio Tracker</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
-                    colors: {
-                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
-                    }
-                }
-            }
-        }
-    </script>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/src/style.css">
 </head>
 <body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 h-full flex flex-col justify-between w-full max-w-full lg:max-w-7xl mx-auto shadow-2xl overflow-hidden transition-colors duration-300 relative selection:bg-emerald-500 selection:text-white">
+    <script type="module" src="/src/main.js"></script>
 
     <!-- Header -->
     <header class="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white shadow-xl z-30 shrink-0 border-b border-emerald-500/20">
@@ -134,10 +120,16 @@
                             <i class="fa-solid fa-diagram-project"></i> แหล่งที่มาของเงินทุนในพอร์ต (Source of Capital)
                         </h4>
                         <p class="text-[11px] text-slate-300">สัดส่วนเงินทุนข้ามกระเป๋าที่นำมาต่อยอดความมั่งคั่ง</p>
+                        <p id="syncStatus" class="text-[9px] text-slate-400 mt-1">ยังไม่เคยซิงค์ข้อมูลล่าสุด</p>
                     </div>
-                    <button onclick="openDepositModal()" class="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-plus-circle"></i> โอนเงินเติมพอร์ต
-                    </button>
+                    <div class="flex gap-2">
+                        <button onclick="syncDataWithMyBusiness()" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-rotate"></i> Sync ข้อมูลร้าน
+                        </button>
+                        <button onclick="openDepositModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-plus-circle"></i> โอนเงินเติมพอร์ต
+                        </button>
+                    </div>
                 </div>
 
                 <div class="w-full h-3 rounded-full bg-slate-700 overflow-hidden flex" id="sourceProgressBar">

@@ -35,6 +35,8 @@ let transactions = currentData.transactions;
 let targetAllocation = currentData.targets;
 
 let currentUsdThbRate = 35.8;
+// URL สำหรับซิงค์ข้อมูล - กรุณาเปลี่ยนเป็น URL ของไฟล์ JSON กลางหรือ GitHub Gist ของคุณ
+const MYBUSINESS_SYNC_URL = 'https://YOUR_API_OR_JSON_URL_HERE';
 let allocationChartInstance = null;
 let growthChartInstance = null;
 let gainLossChartInstance = null;
@@ -275,6 +277,78 @@ async function fetchRealtimeMarketPrices() {
     showToast(`อัปเดตราคาสำเร็จ ${updatedCount} รายการ`);
 }
 
+// --- Expose functions to window for HTML event handlers ---
+window.openProfileModal = openProfileModal;
+window.closeProfileModal = closeProfileModal;
+window.switchTab = switchTab;
+window.fetchRealtimeMarketPrices = fetchRealtimeMarketPrices;
+window.openRebalanceModal = openRebalanceModal;
+window.closeRebalanceModal = closeRebalanceModal;
+window.exportWealthExcel = exportWealthExcel;
+window.toggleDarkMode = toggleDarkMode;
+window.openSettingsModal = openSettingsModal;
+window.closeSettingsModal = closeSettingsModal;
+window.openDepositModal = openDepositModal;
+window.closeDepositModal = closeDepositModal;
+window.loadProfile = loadProfile;
+window.renameProfile = renameProfile;
+window.deleteProfile = deleteProfile;
+window.createNewProfile = createNewProfile;
+window.renderDashboard = renderDashboard;
+window.populateAssetDropdowns = populateAssetDropdowns;
+window.renderHistoryTable = renderHistoryTable;
+window.renderHoldingsList = renderHoldingsList;
+window.editAsset = editAsset;
+window.deleteAsset = deleteAsset;
+window.handleAssetClassChange = handleAssetClassChange;
+window.calculateAssetTotals = calculateAssetTotals;
+window.saveAsset = saveAsset;
+window.resetAssetForm = resetAssetForm;
+window.handleTxAssetSelected = handleTxAssetSelected;
+window.calculateTxTotal = calculateTxTotal;
+window.handleTxTypeChange = handleTxTypeChange;
+window.saveTransaction = saveTransaction;
+window.saveDeposit = saveDeposit;
+window.calculateRebalance = calculateRebalance;
+window.updateTargetVal = updateTargetVal;
+window.saveTargetAllocation = saveTargetAllocation;
+window.openPriceUpdateModal = openPriceUpdateModal;
+window.closePriceUpdateModal = closePriceUpdateModal;
+window.saveAllMarketPrices = saveAllMarketPrices;
+window.deleteTransaction = deleteTransaction;
+window.clearHistory = clearHistory;
+window.clearCurrentProfileData = clearCurrentProfileData;
+window.exportJSONBackup = exportJSONBackup;
+window.importDataFile = importDataFile;
+window.syncDataWithMyBusiness = syncDataWithMyBusiness;
+
+async function syncDataWithMyBusiness() {
+    if (MYBUSINESS_SYNC_URL === 'https://YOUR_API_OR_JSON_URL_HERE') {
+        alert('กรุณาตั้งค่า URL สำหรับซิงค์ข้อมูลในไฟล์ src/main.js (บรรทัดที่ 39) ให้เป็น URL ของไฟล์ JSON ของคุณก่อนใช้งาน');
+        return;
+    }
+    showToast('กำลังซิงค์ข้อมูลจาก mybusiness...');
+    try {
+        const res = await fetch(MYBUSINESS_SYNC_URL);
+        if (!res.ok) throw new Error('ไม่สามารถดึงข้อมูลได้ (Status: ' + res.status + ')');
+        const data = await res.json();
+        
+        // สมมติว่า JSON มีโครงสร้าง { "netProfit": 12345 }
+        if (data && typeof data.netProfit === 'number') {
+            capitalSources.shop = data.netProfit;
+            saveProfileData();
+            renderDashboard();
+            const timeNow = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('syncStatus').textContent = `ซิงค์ล่าสุดเมื่อ: ${timeNow}`;
+            showToast('ซิงค์ข้อมูลสำเร็จ!');
+        } else {
+            throw new Error('โครงสร้างข้อมูลในไฟล์ JSON ไม่ถูกต้อง');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('ซิงค์ข้อมูลไม่สำเร็จ: ' + err.message);
+    }
+}
 window.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('wt_dark_mode') === 'true') {
         document.documentElement.classList.add('dark');
