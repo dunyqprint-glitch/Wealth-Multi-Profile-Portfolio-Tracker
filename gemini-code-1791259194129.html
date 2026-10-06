@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wealth & Multi-Profile Portfolio Tracker</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Prompt', 'sans-serif'] },
+                    colors: {
+                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 h-full flex flex-col justify-between w-full max-w-full lg:max-w-7xl mx-auto shadow-2xl overflow-hidden transition-colors duration-300 relative selection:bg-emerald-500 selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white shadow-xl z-30 shrink-0 border-b border-emerald-500/20">
+        <div class="px-4 md:px-6 py-3 md:py-3.5 flex justify-between items-center gap-2">
+            <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                <button onclick="openProfileModal()" class="px-3 py-2 bg-black/30 hover:bg-black/40 rounded-2xl text-xs font-semibold flex items-center gap-2 transition active:scale-95 border border-white/20 shadow-sm text-left">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 shrink-0">
+                        <i class="fa-solid fa-user-gear text-xs"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-1.5">
+                            <span id="activeProfileName" class="font-bold text-xs sm:text-sm tracking-wide truncate max-w-[100px] sm:max-w-[150px]">พอร์ตส่วนตัว</span>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-white/70"></i>
+                        </div>
+                        <p class="text-[9px] text-emerald-200/80">แตะเพื่อเปลี่ยนโปรไฟล์</p>
+                    </div>
+                </button>
+            </div>
+
+            <div class="hidden md:flex items-center gap-1 bg-black/20 p-1 rounded-2xl border border-white/10">
+                <button onclick="switchTab('dashboard')" id="desktop-nav-dashboard" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 bg-emerald-600 text-white shadow-sm">
+                    <i class="fa-solid fa-chart-pie"></i> ภาพรวม
+                </button>
+                <button onclick="switchTab('assets')" id="desktop-nav-assets" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-layer-group"></i> จัดการสินทรัพย์
+                </button>
+                <button onclick="switchTab('history')" id="desktop-nav-history" class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 text-slate-300 hover:text-white">
+                    <i class="fa-solid fa-list-check"></i> ประวัติธุรกรรม
+                </button>
+            </div>
+
+            <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button id="btnLiveFetch" onclick="fetchRealtimeMarketPrices()" class="px-2 sm:px-2.5 py-1.5 bg-emerald-700/80 hover:bg-emerald-600 rounded-xl text-[11px] sm:text-xs font-bold flex items-center gap-1.5 transition active:scale-95 border border-emerald-400/40 text-emerald-100 shadow-md" title="ดึงราคาสด">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+                    <i id="liveFetchIcon" class="fa-solid fa-bolt text-amber-300 text-xs"></i>
+                    <span class="hidden lg:inline">ดึงราคาตลาดสด</span>
+                </button>
+
+                <button onclick="openRebalanceModal()" class="w-8 h-8 sm:w-auto sm:px-2.5 py-1.5 bg-emerald-800/60 hover:bg-emerald-700/60 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition active:scale-95 border border-emerald-400/30 text-emerald-200" title="ปรับพอร์ต">
+                    <i class="fa-solid fa-scale-balanced text-amber-400"></i>
+                    <span class="hidden xl:inline">ปรับพอร์ต</span>
+                </button>
+
+                <button onclick="exportWealthExcel()" class="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-800/60 hover:bg-emerald-700/60 rounded-xl flex items-center justify-center text-emerald-200 transition active:scale-95 border border-emerald-400/30" title="ส่งออก Excel">
+                    <i class="fa-solid fa-file-excel text-sm text-emerald-300"></i>
+                </button>
+
+                <button onclick="toggleDarkMode()" class="w-8 h-8 sm:w-9 sm:h-9 bg-slate-800/80 hover:bg-slate-700 rounded-xl flex items-center justify-center text-amber-400 transition active:scale-95 border border-white/10" title="สลับธีม">
+                    <i id="darkModeIcon" class="fa-solid fa-moon text-sm"></i>
+                </button>
+
+                <button onclick="openSettingsModal()" class="w-8 h-8 sm:w-9 sm:h-9 bg-slate-800/80 hover:bg-slate-700 rounded-xl flex items-center justify-center text-slate-300 transition active:scale-95 border border-white/10" title="ตั้งค่า">
+                    <i class="fa-solid fa-gear text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-3.5 sm:p-5 md:p-6 space-y-4 md:space-y-6 pb-24 md:pb-8">
+
+        <!-- TAB 1: Dashboard -->
+        <div id="tab-dashboard" class="space-y-4 md:space-y-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+                <div class="bg-gradient-to-br from-emerald-700 via-emerald-800 to-teal-900 text-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-lg relative overflow-hidden border border-emerald-400/30">
+                    <p class="text-[10px] sm:text-[11px] font-semibold text-emerald-200 uppercase tracking-wider flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-vault text-amber-300"></i> Net Worth
+                    </p>
+                    <h3 id="kpiNetWorth" class="text-base sm:text-2xl lg:text-3xl font-bold mt-1.5 sm:mt-2 tracking-tight truncate">฿0.00</h3>
+                    <div class="mt-1 sm:mt-2 flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-100">
+                        <span id="kpiNetWorthChange" class="font-bold">+0.0%</span>
+                        <span class="text-emerald-300/80 hidden sm:inline">เทียบเงินต้น</span>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 relative">
+                    <p class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-sack-dollar text-slate-500"></i> เงินต้นทุนรวม
+                    </p>
+                    <h3 id="kpiPrincipal" class="text-base sm:text-2xl font-bold mt-1.5 sm:mt-2 text-slate-800 dark:text-slate-100 truncate">฿0.00</h3>
+                    <p class="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 mt-1 sm:mt-2 truncate">ยอดเงินลงทุนสะสม</p>
+                </div>
+
+                <div id="kpiGainLossCard" class="bg-white dark:bg-slate-900 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 relative">
+                    <p class="text-[10px] sm:text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-arrow-trend-up text-emerald-500"></i> กำไร/ขาดทุน
+                    </p>
+                    <h3 id="kpiGainLoss" class="text-base sm:text-2xl font-bold mt-1.5 sm:mt-2 text-emerald-600 dark:text-emerald-400 truncate">฿0.00</h3>
+                    <p id="kpiGainLossPct" class="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 sm:mt-2">+0.00%</p>
+                </div>
+
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl shadow-lg relative overflow-hidden border border-amber-300/40">
+                    <p class="text-[10px] sm:text-[11px] font-bold text-slate-900/80 uppercase tracking-wider flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-coins text-slate-950"></i> ปันผลสะสม
+                    </p>
+                    <h3 id="kpiDividends" class="text-base sm:text-2xl font-bold mt-1.5 sm:mt-2 text-slate-950 truncate">฿0.00</h3>
+                    <p class="text-[10px] sm:text-[11px] font-medium text-slate-900/80 mt-1 sm:mt-2 truncate">ผลตอบแทนที่รับแล้ว</p>
+                </div>
+            </div>
+
+            <!-- Inflow Source Indicator -->
+            <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 text-white p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-lg border border-slate-700/60">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                    <div>
+                        <h4 class="text-xs sm:text-sm font-bold flex items-center gap-2 text-amber-300">
+                            <i class="fa-solid fa-diagram-project"></i> แหล่งที่มาของเงินทุนในพอร์ต (Source of Capital)
+                        </h4>
+                        <p class="text-[11px] text-slate-300">สัดส่วนเงินทุนข้ามกระเป๋าที่นำมาต่อยอดความมั่งคั่ง</p>
+                    </div>
+                    <button onclick="openDepositModal()" class="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs hover:bg-amber-400 active:scale-95 transition flex items-center justify-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-plus-circle"></i> โอนเงินเติมพอร์ต
+                    </button>
+                </div>
+
+                <div class="w-full h-3 rounded-full bg-slate-700 overflow-hidden flex" id="sourceProgressBar">
+                    <div style="width: 0%" class="bg-emerald-500 transition-all duration-500"></div>
+                    <div style="width: 0%" class="bg-blue-500 transition-all duration-500"></div>
+                    <div style="width: 0%" class="bg-purple-500 transition-all duration-500"></div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 mt-3 text-center text-xs">
+                    <div class="p-2 sm:p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <span class="text-[9px] sm:text-[10px] text-emerald-400 font-semibold block truncate">กำไรสะสมหน้าร้าน (กอง 3)</span>
+                        <span id="srcShopAmount" class="font-bold text-slate-100 text-xs sm:text-base mt-0.5 block truncate">฿0</span>
+                        <span id="srcShopPct" class="text-[9px] sm:text-[10px] text-slate-400">0%</span>
+                    </div>
+                    <div class="p-2 sm:p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <span class="text-[9px] sm:text-[10px] text-blue-400 font-semibold block truncate">เงินออมส่วนตัว</span>
+                        <span id="srcPersonalAmount" class="font-bold text-slate-100 text-xs sm:text-base mt-0.5 block truncate">฿0</span>
+                        <span id="srcPersonalPct" class="text-[9px] sm:text-[10px] text-slate-400">0%</span>
+                    </div>
+                    <div class="p-2 sm:p-3 rounded-xl bg-slate-800/80 border border-slate-700">
+                        <span class="text-[9px] sm:text-[10px] text-purple-400 font-semibold block truncate">เงินสำรองฉุกเฉิน</span>
+                        <span id="srcEmergencyAmount" class="font-bold text-slate-100 text-xs sm:text-base mt-0.5 block truncate">฿0</span>
+                        <span id="srcEmergencyPct" class="text-[9px] sm:text-[10px] text-slate-400">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-emerald-600"></i> สัดส่วน 5 คลาส
+                        </h3>
+                        <span class="text-[10px] text-slate-400">Allocation</span>
+                    </div>
+                    <div class="relative h-48 sm:h-56 flex items-center justify-center">
+                        <canvas id="allocationDonutChart"></canvas>
+                    </div>
+                    <div id="allocationLegend" class="mt-3 text-[11px] space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar"></div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 lg:col-span-2 flex flex-col justify-between">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-chart-area text-teal-600"></i> การเติบโตของความมั่งคั่ง (Portfolio Trend)
+                        </h3>
+                        <span class="text-[10px] text-slate-400">Net Worth Growth</span>
+                    </div>
+                    <div class="relative h-56 sm:h-64">
+                        <canvas id="growthLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-chart-simple text-amber-500"></i> เปรียบเทียบผลตอบแทนกำไร/ขาดทุนรายสินทรัพย์
+                    </h3>
+                    <span class="text-[10px] text-slate-400">Gain/Loss By Asset</span>
+                </div>
+                <div class="relative h-56 sm:h-64">
+                    <canvas id="gainLossBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Holdings List -->
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex flex-wrap justify-between items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-emerald-600"></i> สินทรัพย์ในพอร์ตทั้งหมด (Holdings)
+                        </h3>
+                        <p class="text-[10px] text-slate-400">
+                            มูลค่าต้นทุน, ราคาตลาด, ผลตอบแทน <span id="lastUpdatedTag" class="text-emerald-500 font-mono ml-1"></span>
+                        </p>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                        <button onclick="fetchRealtimeMarketPrices()" class="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-100 rounded-xl text-xs font-bold flex items-center gap-1.5 transition border border-emerald-300 dark:border-emerald-800">
+                            <i class="fa-solid fa-rotate text-emerald-600"></i> ดึงราคาตลาดสด
+                        </button>
+                        <button onclick="switchTab('assets')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-plus"></i> เพิ่มสินทรัพย์
+                        </button>
+                        <button onclick="openPriceUpdateModal()" class="px-2.5 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-pen-to-square text-slate-500"></i> ปรับราคาเอง
+                        </button>
+                    </div>
+                </div>
+
+                <div id="holdingsListContainer" class="space-y-2.5"></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Asset Management & Transactions -->
+        <div id="tab-assets" class="space-y-4 md:space-y-6 hidden">
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 id="assetFormTitle" class="text-xs sm:text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                            <i class="fa-solid fa-plus-circle text-emerald-600"></i> เพิ่มสินทรัพย์ใหม่เข้าพอร์ต
+                        </h3>
+                        <p class="text-[10px] text-slate-400">กรอกข้อมูลสินทรัพย์เพื่อติดตามมูลค่าและผลตอบแทน</p>
+                    </div>
+                    <button id="btnCancelEditAsset" onclick="resetAssetForm()" class="hidden text-xs text-rose-500 font-bold hover:underline">
+                        ยกเลิกแก้ไข
+                    </button>
+                </div>
+
+                <form id="assetForm" onsubmit="saveAsset(event)" class="space-y-3.5" autocomplete="off">
+                    <input type="hidden" id="assetEditId" value="-1">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">คลาสสินทรัพย์ (Asset Class)</label>
+                            <select id="assetClass" onchange="handleAssetClassChange()" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none">
+                                <option value="cash">1. เงินสด & เงินฝากสำรอง (Cash & Emergency)</option>
+                                <option value="funds" selected>2. กองทุนรวม & หุ้นปันผล (Funds & Dividend Stocks)</option>
+                                <option value="gold">3. ทองคำ & สินทรัพย์มั่นคง (Gold & Commodities)</option>
+                                <option value="business">4. ทรัพย์สินเพื่อการค้า & กิจการ (Business Assets)</option>
+                                <option value="crypto">5. สินทรัพย์ทางเลือก / ดิจิทัล (Crypto & Alternatives)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ชื่อสินทรัพย์ / สัญลักษณ์</label>
+                            <input type="text" id="assetName" placeholder="เช่น K-USA (SPY), SCBNDQ (QQQ), BTC, ทองคำแท่ง" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 block mt-1">
+                                💡 ดึงราคาสดอัตโนมัติ: สำหรับกองทุนต่างประเทศ ใส่สัญลักษณ์ ETF เช่น <b>SPY, IVV, VOO, QQQ, VT</b> หรือคริปโต <b>BTC, ETH, SOL</b>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div>
+                            <label id="lblQuantity" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">จำนวนหน่วย (Units)</label>
+                            <input type="number" step="any" min="0" id="assetQuantity" placeholder="1.0" required oninput="calculateAssetTotals()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                        <div>
+                            <label id="lblAvgCost" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ต้นทุนเฉลี่ย / หน่วย (฿)</label>
+                            <input type="number" step="any" min="0" id="assetAvgCost" placeholder="0.00" required oninput="calculateAssetTotals()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                        <div>
+                            <label id="lblCurrentPrice" class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ราคาตลาดปัจจุบัน (฿)</label>
+                            <input type="number" step="any" min="0" id="assetCurrentPrice" placeholder="0.00" required oninput="calculateAssetTotals()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">เงินต้นรวมคำนวณ (฿)</label>
+                            <input type="text" id="assetTotalCost" readonly class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 text-slate-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">มูลค่าตลาดรวม (฿)</label>
+                            <input type="text" id="assetTotalMarket" readonly class="w-full bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 text-emerald-600 dark:text-emerald-400 font-bold outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">เงินปันผลสะสม (฿)</label>
+                            <input type="number" step="any" min="0" id="assetDividends" placeholder="0.00" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none text-amber-600 dark:text-amber-400 font-bold">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">หมายเหตุ / แหล่งที่มา</label>
+                        <input type="text" id="assetNote" placeholder="เช่น กองทุนหุ้นสหรัฐฯ อิง S&P500 DCA ทุกเดือน" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                    </div>
+
+                    <button type="submit" id="btnSaveAsset" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white rounded-xl text-xs font-bold shadow-md transition">
+                        บันทึกสินทรัพย์
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2 text-slate-800 dark:text-slate-200">
+                            <i class="fa-solid fa-receipt text-amber-500"></i> บันทึกรายการเคลื่อนไหว (Buy / Sell / Dividend)
+                        </h3>
+                        <p class="text-[10px] text-slate-400">บันทึกประวัติการซื้อเพิ่ม, ขายทำกำไร, หรือรับเงินปันผล</p>
+                    </div>
+                </div>
+
+                <form id="txForm" onsubmit="saveTransaction(event)" class="space-y-3.5" autocomplete="off">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ประเภทรายการ</label>
+                            <select id="txType" onchange="handleTxTypeChange()" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold rounded-xl px-3 py-2.5 outline-none text-emerald-600">
+                                <option value="buy">🟢 ซื้อเพิ่ม (Buy / Invest)</option>
+                                <option value="sell">🔴 ขายทำกำไร / ขายคืน (Sell / Take Profit)</option>
+                                <option value="dividend">🟡 รับเงินปันผล (Dividend / Yield)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">เลือกสินทรัพย์</label>
+                            <select id="txAssetSelect" onchange="handleTxAssetSelected()" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none"></select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">วันที่ทำรายการ</label>
+                            <input type="date" id="txDate" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                        <div id="boxTxUnits">
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">จำนวนหน่วย</label>
+                            <input type="number" step="any" min="0" id="txUnits" oninput="calculateTxTotal()" placeholder="0" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                        <div id="boxTxPrice">
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ราคาต่อหน่วย (฿)</label>
+                            <input type="number" step="any" min="0" id="txPricePerUnit" oninput="calculateTxTotal()" placeholder="0.00" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">มูลค่ารวมสุทธิ (฿)</label>
+                            <input type="number" step="any" min="0" id="txTotalAmount" placeholder="0.00" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none font-bold text-slate-800 dark:text-slate-100">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        <div id="boxTxSource">
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">แหล่งเงินทุน (Source of Fund)</label>
+                            <select id="txSource" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                                <option value="shop">กำไรสะสมหน้าร้าน (กองที่ 3)</option>
+                                <option value="personal">เงินออมส่วนตัว</option>
+                                <option value="emergency">เงินสำรองฉุกเฉิน</option>
+                                <option value="other">แหล่งเงินอื่น / เงินหมุน</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">บันทึกช่วยจำ (Note)</label>
+                            <input type="text" id="txNote" placeholder="เช่น DCA ประจำเดือน, ปันผลรอบไตรมาส" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-400 active:scale-95 text-slate-950 rounded-xl text-xs font-bold shadow-md transition">
+                        บันทึกรายการเคลื่อนไหว
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 3: Transactions History -->
+        <div id="tab-history" class="space-y-4 md:space-y-6 hidden">
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div>
+                        <h3 class="text-xs sm:text-sm font-bold flex items-center gap-2">
+                            <i class="fa-solid fa-clock-rotate-left text-teal-600"></i> ประวัติรายการลงทุนทั้งหมด
+                        </h3>
+                        <p class="text-[10px] text-slate-400">บันทึกซื้อ ขาย ปันผล และการเติมทุนเข้าพอร์ต</p>
+                    </div>
+                    <button onclick="clearHistory()" class="px-2.5 py-1.5 bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 rounded-xl text-xs font-bold hover:bg-rose-100 transition">
+                        ล้างประวัติ
+                    </button>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-2 justify-between">
+                    <input type="text" id="historySearch" oninput="renderHistoryTable()" placeholder="ค้นหารายการ, ชื่อสินทรัพย์, แหล่งเงิน..." class="w-full sm:w-2/3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                    <select id="historyFilterType" onchange="renderHistoryTable()" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none">
+                        <option value="all">ทั้งหมดทุกประเภท</option>
+                        <option value="buy">เฉพาะ ซื้อเพิ่ม</option>
+                        <option value="sell">เฉพาะ ขายทำกำไร</option>
+                        <option value="dividend">เฉพาะ ปันผล</option>
+                        <option value="deposit">เฉพาะ เติมเงินทุน</option>
+                    </select>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs min-w-[600px] sm:min-w-full">
+                        <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-400 uppercase text-[10px]">
+                            <tr>
+                                <th class="p-3">วันที่</th>
+                                <th class="p-3">ประเภท</th>
+                                <th class="p-3">สินทรัพย์</th>
+                                <th class="p-3 text-right">จำนวน</th>
+                                <th class="p-3 text-right">มูลค่า (฿)</th>
+                                <th class="p-3">แหล่งเงิน/หมายเหตุ</th>
+                                <th class="p-3 text-center">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                    </table>
+                </div>
+
+                <div id="historyEmptyState" class="py-12 text-center text-xs text-slate-400 hidden">
+                    ยังไม่มีประวัติรายการลงทุน
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Mobile Navigation Bar -->
+    <nav class="md:hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 z-40 flex justify-around items-center py-2 px-3 shadow-2xl">
+        <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="flex flex-col items-center flex-1 py-1 text-emerald-600 dark:text-emerald-400">
+            <i class="fa-solid fa-chart-pie text-lg"></i>
+            <span class="text-[10px] font-bold mt-1">ภาพรวม</span>
+        </button>
+        <button onclick="switchTab('assets')" id="nav-btn-assets" class="flex flex-col items-center flex-1 py-1 text-slate-400">
+            <i class="fa-solid fa-layer-group text-lg"></i>
+            <span class="text-[10px] font-bold mt-1">สินทรัพย์</span>
+        </button>
+        <button onclick="switchTab('history')" id="nav-btn-history" class="flex flex-col items-center flex-1 py-1 text-slate-400">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="text-[10px] font-bold mt-1">ประวัติ</span>
+        </button>
+    </nav>
+
+    <!-- Modals -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh]">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold">จัดการโปรไฟล์ / กระเป๋าพอร์ต</h3>
+                        <p class="text-[10px] text-slate-400">สลับหรือสร้างพอร์ตแยกสำหรับแต่ละคนได้</p>
+                    </div>
+                </div>
+                <button onclick="closeProfileModal()" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="profileListContainer" class="overflow-y-auto custom-scrollbar flex-1 space-y-2.5 max-h-60"></div>
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block">สร้างโปรไฟล์ / พอร์ตใหม่:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="newProfileNameInput" placeholder="เช่น พอร์ตของภรรยา, พอร์ตกลาง..." class="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2 outline-none">
+                    <button onclick="createNewProfile()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition shadow-sm whitespace-nowrap">
+                        <i class="fa-solid fa-plus mr-1"></i> สร้าง
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="depositModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                        <i class="fa-solid fa-money-bill-transfer"></i>
+                    </div>
+                    <h3 class="text-sm font-bold">บันทึกเงินโอนเติมพอร์ต</h3>
+                </div>
+                <button onclick="closeDepositModal()" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form onsubmit="saveDeposit(event)" class="space-y-3" autocomplete="off">
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">แหล่งที่มาของเงินทุน</label>
+                    <select id="depSource" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none">
+                        <option value="shop">🏪 กำไรสะสมหน้าร้าน (กองที่ 3)</option>
+                        <option value="personal">👤 เงินออมส่วนตัว</option>
+                        <option value="emergency">🛡️ เงินสำรองฉุกเฉิน</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">ฝากเข้าสินทรัพย์คลาส</label>
+                    <select id="depTargetClass" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-semibold rounded-xl px-3 py-2.5 outline-none">
+                        <option value="cash">เงินสด & เงินฝากสำรอง (Cash)</option>
+                        <option value="funds">กองทุนรวม & หุ้นปันผล (Funds & Stocks)</option>
+                        <option value="gold">ทองคำ & สินทรัพย์มั่นคง (Gold)</option>
+                        <option value="business">ทรัพย์สินเพื่อการค้า & กิจการ</option>
+                        <option value="crypto">สินทรัพย์ทางเลือก / ดิจิทัล</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">จำนวนเงินทุนที่เติม (บาท)</label>
+                    <input type="number" step="any" min="1" id="depAmount" placeholder="0.00" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-base font-bold text-emerald-600 rounded-xl px-3 py-2.5 outline-none">
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">วันที่เติมเงิน</label>
+                    <input type="date" id="depDate" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 block mb-1">บันทึกช่วยจำ</label>
+                    <input type="text" id="depNote" placeholder="เช่น เงินกำไรปิดรอบประจำสัปดาห์" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-xl px-3 py-2.5 outline-none">
+                </div>
+                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition">
+                    ยืนยันการเติมเงินทุน
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="rebalanceModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh]">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-500 flex items-center justify-center">
+                        <i class="fa-solid fa-scale-balanced"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold">เครื่องมือจำลองปรับสมดุลพอร์ต</h3>
+                        <p class="text-[10px] text-slate-400">คำนวณเงินปรับเพิ่ม/ลดเพื่อให้เป็นไปตามเป้าหมาย</p>
+                    </div>
+                </div>
+                <button onclick="closeRebalanceModal()" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <span class="font-semibold text-slate-500">เงินลงทุนใหม่ที่ต้องการเติมเพิ่ม (ถ้ามี):</span>
+                <input type="number" step="any" min="0" id="rebalanceInjection" value="0" oninput="calculateRebalance()" placeholder="0.00" class="w-full sm:w-32 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl px-2.5 py-1 text-right font-bold text-emerald-600 outline-none">
+            </div>
+            <div class="overflow-y-auto custom-scrollbar flex-1 space-y-3">
+                <table class="w-full text-left text-xs min-w-[340px] sm:min-w-full">
+                    <thead class="text-slate-400 text-[10px] uppercase border-b">
+                        <tr>
+                            <th class="pb-2">คลาสสินทรัพย์</th>
+                            <th class="pb-2 text-right">มูลค่าปัจจุบัน</th>
+                            <th class="pb-2 text-center">สัดส่วนจริง</th>
+                            <th class="pb-2 text-center">เป้าหมาย %</th>
+                            <th class="pb-2 text-right">คำแนะนำปรับ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rebalanceTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+                </table>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+                <span id="rebalanceTargetSum" class="font-bold text-slate-500">รวมเป้าหมาย: 100%</span>
+                <button onclick="saveTargetAllocation()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm transition">
+                    บันทึกเป้าหมาย
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="priceModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col p-5 sm:p-6 space-y-4 border border-slate-200 dark:border-slate-800 max-h-[85vh]">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-teal-500/20 text-teal-500 flex items-center justify-center">
+                        <i class="fa-solid fa-arrows-rotate"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold">อัปเดตราคาตลาด (Market Price)</h3>
+                        <p class="text-[10px] text-slate-400">ดึงสดอัตโนมัติ หรือแก้ไขราคาเองเพื่อคำนวณ P/L</p>
+                    </div>
+                </div>
+                <button onclick="closePriceUpdateModal()" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex justify-between items-center p-2.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-xs">
+                <span class="text-emerald-800 dark:text-emerald-300 font-semibold truncate pr-2">
+                    <i class="fa-solid fa-bolt mr-1 text-amber-500"></i> อัปเดตราคาตลาดสด
+                </span>
+                <button onclick="fetchRealtimeMarketPrices()" class="px-3 py-1 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-500 transition shrink-0">
+                    ดึงสดเดี๋ยวนี้
+                </button>
+            </div>
+            <div class="overflow-y-auto custom-scrollbar flex-1 space-y-2.5" id="priceUpdateListContainer"></div>
+            <button onclick="saveAllMarketPrices()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md transition">
+                บันทึกการอัปเดตราคาตลาดทั้งหมด
+            </button>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 border border-slate-200 dark:border-slate-800">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2">
+                <h3 class="font-bold text-sm">การสำรอง & จัดการข้อมูลพอร์ต</h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <button onclick="openProfileModal(); closeSettingsModal();" class="w-full py-2.5 px-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-bold text-left flex items-center justify-between">
+                <span><i class="fa-solid fa-users-gear mr-2 text-emerald-600"></i> จัดการโปรไฟล์ / พอร์ตแยกหลายคน</span>
+                <span class="text-[10px] bg-emerald-200 dark:bg-emerald-800 px-2 py-0.5 rounded">โปรไฟล์</span>
+            </button>
+            <label class="w-full text-center px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md transition">
+                <i class="fa-solid fa-file-import"></i> นำเข้าไฟล์ (.xlsx, .json)
+                <input type="file" id="importFileInput" accept=".xlsx,.xls,.json" class="hidden" onchange="importDataFile(event)">
+            </label>
+            <button onclick="exportWealthExcel()" class="w-full py-3 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-xl text-xs font-bold text-left px-4 flex items-center justify-between">
+                <span><i class="fa-solid fa-file-excel mr-2 text-emerald-600 text-sm"></i> ส่งออกรายงานความมั่งคั่ง 2 ชีท (.xlsx)</span>
+                <span class="text-[10px] bg-emerald-200 dark:bg-emerald-800 px-2 py-0.5 rounded">Excel</span>
+            </button>
+            <button onclick="exportJSONBackup()" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-semibold text-left px-4 text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span><i class="fa-solid fa-code mr-2 text-slate-500"></i> สำรองไฟล์ดิบ JSON Backup</span>
+                <span class="text-[10px] text-slate-400">.json</span>
+            </button>
+            <button onclick="clearCurrentProfileData()" class="w-full py-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 rounded-xl text-xs font-semibold text-center hover:bg-rose-100 transition">
+                ล้างข้อมูลเฉพาะโปรไฟล์ปัจจุบัน (เริ่มใหม่จาก 0)
+            </button>
+            <button onclick="closeSettingsModal()" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold mt-2">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <div id="alertToast" class="fixed top-5 left-1/2 transform -translate-x-1/2 z-50 -translate-y-24 opacity-0 transition-all duration-300 pointer-events-none w-11/12 max-w-sm">
+        <div class="bg-slate-900/95 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs flex items-center gap-3 border border-slate-700">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
+            <span id="alertToastMessage" class="font-medium"></span>
+        </div>
+    </div>
+
+    <!-- External Script -->
+    <script src="app.js"></script>
+</body>
+</html>
